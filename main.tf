@@ -97,6 +97,15 @@ resource "aws_db_proxy_endpoint" "this" {
   target_role            = each.value.target_role
 
   tags = merge(var.tags, each.value.tags)
+
+  # A custom endpoint references its proxy by name (stable), so a ForceNew on the
+  # proxy (e.g. an endpoint_network_type / target_connection_network_type change)
+  # replaces the proxy but leaves this endpoint behind, orphaning it. Tie the
+  # endpoint's lifecycle to the proxy so it is destroyed before the proxy and
+  # recreated after it.
+  lifecycle {
+    replace_triggered_by = [aws_db_proxy.this[0]]
+  }
 }
 
 ################################################################################
