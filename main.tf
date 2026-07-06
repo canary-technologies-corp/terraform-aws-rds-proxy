@@ -102,9 +102,10 @@ resource "aws_db_proxy_endpoint" "this" {
   # proxy (e.g. an endpoint_network_type / target_connection_network_type change)
   # replaces the proxy but leaves this endpoint behind, orphaning it. Tie the
   # endpoint's lifecycle to the proxy so it is destroyed before the proxy and
-  # recreated after it.
+  # recreated after it. Trigger on the ARN (new prx- id on every recreation), not
+  # the whole resource: in-place proxy updates must not replace live endpoints.
   lifecycle {
-    replace_triggered_by = [aws_db_proxy.this[0]]
+    replace_triggered_by = [aws_db_proxy.this[0].arn]
   }
 }
 
