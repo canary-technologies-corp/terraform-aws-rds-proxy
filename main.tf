@@ -69,6 +69,16 @@ resource "aws_db_proxy_target" "db_instance" {
   db_proxy_name          = aws_db_proxy.this[0].name
   target_group_name      = aws_db_proxy_default_target_group.this[0].name
   db_instance_identifier = var.db_instance_identifier
+
+  # A target references its proxy by name (stable), so a ForceNew on the proxy
+  # replaces the proxy but RDS drops the registration with it, and Terraform keeps
+  # the target in state. The replacement apply then leaves the new proxy with an
+  # empty target group until a second plan notices the drift. Tie the target's
+  # lifecycle to the proxy the same way as the endpoints below: trigger on the ARN
+  # so in-place proxy updates do not touch live targets.
+  lifecycle {
+    replace_triggered_by = [aws_db_proxy.this[0].arn]
+  }
 }
 
 resource "aws_db_proxy_target" "db_cluster" {
@@ -79,6 +89,12 @@ resource "aws_db_proxy_target" "db_cluster" {
   db_proxy_name         = aws_db_proxy.this[0].name
   target_group_name     = aws_db_proxy_default_target_group.this[0].name
   db_cluster_identifier = var.db_cluster_identifier
+
+  # See aws_db_proxy_target.db_instance: re-register the cluster when the proxy is
+  # replaced, in the same apply.
+  lifecycle {
+    replace_triggered_by = [aws_db_proxy.this[0].arn]
+  }
 }
 
 ################################################################################
